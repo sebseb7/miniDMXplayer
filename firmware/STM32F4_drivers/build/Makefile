@@ -7,7 +7,7 @@ RANLIB = arm-none-eabi-ranlib
 CFLAGS = -Wall -O0 -mthumb
 CFLAGS += -mfpu=fpv4-sp-d16 -mfloat-abi=hard -falign-functions=16
 CFLAGS += -mcpu=cortex-m4 -fsingle-precision-constant -funsigned-char -Wundef -Wsign-compare -Wunreachable-code -Wstrict-prototypes
-CFLAGS += -I../inc -I../../core -DARM_MATH_CM4 -DUSE_STDPERIPH_DRIVER
+CFLAGS += -I../inc -I../../core -DDISCOVERY -DARM_MATH_CM4 -DUSE_STDPERIPH_DRIVER
 
 SRCS = \
 ../src/misc.c \

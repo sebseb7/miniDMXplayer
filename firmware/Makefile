@@ -14,6 +14,7 @@ endif
 
 #########################################################################
 
+
 SRC=$(wildcard  *.c) \
 	core/syscalls.c core/stm32fxxx_it.c core/system_stm32f$(STM32F)xx.c \
 	../animations/bounce.c \
@@ -37,7 +38,7 @@ LSTFILES= $(SRC:.c=.lst)
 HEADERS=$(wildcard core/*.h *.h libs/math.h libs/spi.h)
 
 #  Compiler Options
-GCFLAGS = -DSTM32F=$(STM32F) -ffreestanding -std=gnu99 -mcpu=cortex-m$(CORTEXM) -mthumb $(OPTIMIZATION) -I. -Icore -DARM_MATH_CM$(CORTEXM) -DUSE_STDPERIPH_DRIVER 
+GCFLAGS = -DDISCOVERY -DSTM32F=$(STM32F) -ffreestanding -std=gnu99 -mcpu=cortex-m$(CORTEXM) -mthumb $(OPTIMIZATION) -I. -Icore -DARM_MATH_CM$(CORTEXM) -DUSE_STDPERIPH_DRIVER 
 ifeq ($(CORTEXM),4)
 GCFLAGS+= -mfpu=fpv4-sp-d16 -mfloat-abi=hard -falign-functions=16 
 endif
@@ -81,6 +82,9 @@ $(PROJECT).elf: $(OBJECTS) Makefile $(LSCRIPT)
 	@echo "  LD $(PROJECT).elf"
 	@$(GCC) $(OBJECTS) $(LDFLAGS)  -o $(PROJECT).elf
 
+tools/flash/st-flash:
+	make -C tools
+
 clean:
 	$(REMOVE) $(OBJECTS)
 	$(REMOVE) $(LSTFILES)
@@ -100,7 +104,11 @@ clean:
 
 #########################################################################
 
-flash: all
-	dfu-util -a 0 -s 0x08000000 -D $(PROJECT).bin -R
+flash: tools/flash/st-flash all
+
+	tools/flash/st-flash write $(PROJECT).bin 0x08000000 
+
+#flash: all
+#	dfu-util -a 0 -s 0x08000000 -D $(PROJECT).bin -R
 
 .PHONY : clean all flash

@@ -1,6 +1,7 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
+
 #if STM32F == 2
 #include "stm32f2xx.h"
 #endif
@@ -25,7 +26,7 @@ void fillRGB(uint8_t r, uint8_t g, uint8_t b);
 #define KEY_A (1<<0)
 #define KEY_B (1<<1)
 
-#define LED_WIDTH 238
+#define LED_WIDTH 4
 #define LED_HEIGHT 1
 #define MINIDMX
 #define FIRST_ON 22

@@ -9,7 +9,10 @@ static uint16_t h = 0;
 
 static uint8_t tick(void) {
 
-	h+=1;
+		int h2 = h;
+	for(int x=0;x<LED_WIDTH;x++)
+	{
+	h+=40;
 	if(h>=360)
 		h=0;
 
@@ -27,9 +30,13 @@ static uint8_t tick(void) {
 	rgb.g /= norm;
 	rgb.b /= norm;   
 
-	for(int x=0;x<LED_WIDTH;x++)
 		setLedX(x,rgb.r*255,rgb.g*255,rgb.b*255);
-
+		
+	}
+	h=h2;
+	h+=1;
+	if(h>=360)
+		h=0;
 
 	return 0;
 }
@@ -45,7 +52,7 @@ static void deinit(void)
 
 static void constructor(void) CONSTRUCTOR_ATTRIBUTES
 void constructor(void) {
-	registerAnimation(init,tick,deinit, 35, 1500,1);
+	registerAnimation(init,tick,deinit, 10, 4000,1);
 }
 
 

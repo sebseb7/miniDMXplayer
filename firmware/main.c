@@ -15,7 +15,7 @@ static uint16_t key_state;
 static uint16_t key_press;
 static uint32_t buttonsInitialized = 0;
 static int mode = 0;
-static int dim = 0;
+//static int dim = 0;
 
 static __IO uint32_t TimingDelay;
 static __IO uint32_t tick;
@@ -69,6 +69,41 @@ uint16_t get_key_state( uint16_t key_mask )
 {
 	return key_mask & key_press;
 }
+
+
+void setBaud(uint32_t baud)
+{
+	uint32_t tmpreg = 0x00, apbclock = 0x00;
+	uint32_t integerdivider = 0x00;
+	uint32_t fractionaldivider = 0x00;
+	RCC_ClocksTypeDef RCC_ClocksStatus;
+	RCC_GetClocksFreq(&RCC_ClocksStatus);
+
+	apbclock = RCC_ClocksStatus.PCLK2_Frequency;
+
+	if ((USART1->CR1 & USART_CR1_OVER8) != 0)
+	{
+		integerdivider = ((25 * apbclock) / (2 * baud));    
+	}
+	else
+	{
+		integerdivider = ((25 * apbclock) / (4 * baud));    
+	}
+	tmpreg = (integerdivider / 100) << 4;
+
+	fractionaldivider = integerdivider - (100 * (tmpreg >> 4));
+
+	if ((USART1->CR1 & USART_CR1_OVER8) != 0)
+	{
+		tmpreg |= ((((fractionaldivider * 8) + 50) / 100)) & ((uint8_t)0x07);
+	}
+	else
+	{
+		tmpreg |= ((((fractionaldivider * 16) + 50) / 100)) & ((uint8_t)0x0F);
+	}
+	USART1->BRR = (uint16_t)tmpreg;
+}
+
 
 #define MAX_ANIMATIONS 30
 
@@ -133,42 +168,16 @@ void fillRGB(uint8_t red,uint8_t green,uint8_t blue)
 	}
 }
 
-static void lcdFlush(void)
+void USART_putc(const uint8_t byte)
 {
-		
-	for(int x= 0;x < LED_WIDTH;x++)
-	{
-		spi_send (0x80 | (color_correction[leds[x][1]]>>dim) );
-		spi_send (0x80 | (color_correction[leds[x][0]]>>dim) );
-		spi_send (0x80 | (color_correction[leds[x][2]]>>dim) );
-	}
-	spi_send(0);
-	
+	while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+	USART_SendData(USART1, byte);
+//	while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
 
-	if(mode == 0)
-	{
-		spi_send (0x80 | 1);
-		spi_send (0x80 | 0);
-		spi_send (0x80 | 0);
-	}
-	if(mode == 1)
-	{
-		spi_send (0x80 | 0);
-		spi_send (0x80 | 1);
-		spi_send (0x80 | 0);
-	}
-	if(mode == 2)
-	{
-		spi_send (0x80 | 0);
-		spi_send (0x80 | 0);
-		spi_send (0x80 | 1);
-	}
-	
-	spi_send (0x80 | 0);
-	spi_send (0x80 | 0);
-	spi_send (0x80 | 0);
 }
 
+GPIO_InitTypeDef  GPIO_InitStructure;
+USART_InitTypeDef USART_InitStructure;
 
 int main(void)
 {
@@ -179,89 +188,140 @@ int main(void)
 	/* SysTick end of count event each 0.1ms */
 	SysTick_Config(RCC_Clocks.HCLK_Frequency / 10000);
 
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-	
-	GPIO_InitTypeDef GPIO_InitStructure;
-	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
+	//discovery leds
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12 | GPIO_Pin_13| GPIO_Pin_14| GPIO_Pin_15;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOD, &GPIO_InitStructure);
+
+	//usart1
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_13;       
-	GPIO_Init(GPIOB, &GPIO_InitStructure);  
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_12;       
-	GPIO_Init(GPIOB, &GPIO_InitStructure);  
-	
-	//buttons
-	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_2;       
-	GPIO_Init(GPIOA, &GPIO_InitStructure);  
-	
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_3;       
-	GPIO_Init(GPIOA, &GPIO_InitStructure);  
-	buttonsInitialized=1;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_USART1); // USART1_TX
+	//USART_InitStructure.USART_BaudRate = 375000;
+	USART_InitStructure.USART_BaudRate = 250000;
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+	USART_InitStructure.USART_StopBits = USART_StopBits_2;
+	USART_InitStructure.USART_Parity = USART_Parity_No;
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+	USART_InitStructure.USART_Mode = USART_Mode_Tx;
+	USART_Init(USART1, &USART_InitStructure);
+	USART_Cmd(USART1, ENABLE);
 
-	init_spi();
+		//GPIO_SetBits(GPIOD, GPIO_Pin_12);
+		//Delay(200);
+		//GPIO_SetBits(GPIOD, GPIO_Pin_13);
+		//Delay(200);
+		//GPIO_SetBits(GPIOD, GPIO_Pin_14);
+		//Delay(200);
+		//GPIO_SetBits(GPIOD, GPIO_Pin_15);
+		//Delay(200);
+		//GPIO_ResetBits(GPIOD, GPIO_Pin_12|GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15);
+		//Delay(200);
+//	while(1)
+	{
 	
 	
+		Delay100us(1);
+		setBaud(57600);
+		Delay100us(1);
+		USART_putc(0);
+		Delay100us(1);
+		setBaud(250000);
+		Delay100us(1);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(255);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		Delay(15);
+		
+		Delay100us(1);
+		setBaud(57600);
+		Delay100us(1);
+		USART_putc(0);
+		Delay100us(1);
+		setBaud(250000);
+		Delay100us(1);
+		USART_putc(0);
+		USART_putc(255);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		USART_putc(0);
+		Delay(15);
+	
+	}
+
+
+
+
 	int current_animation = 0;
 	animations[current_animation].init_fp();
 	int tick_count = 0;
-	
-	
-/*	while(1)
-	{
-		spi_send(0);
-		for(int x= 0;x < 194;x++)
-		{
-			spi_send (0x80 | 0xff );
-			spi_send (0x80 | 0xff );
-			spi_send (0x80 | 0xff );
-		}
-		spi_send(0);
-		Delay(200);
-		spi_send(0);
-		for(int x= 0;x < 194;x++)
-		{
-			spi_send (0x80 | 0x00 );
-			spi_send (0x80 | 0x00 );
-			spi_send (0x80 | 0x00 );
-		}
-		spi_send(0);
-		Delay(200);
-	}
-*/
-	
-	
+
+
 
 	int loopcount = 0;
-	
 
 
-	spi_send(0);
+
 	while(1)
 	{
-		loopcount++;
+/*		loopcount++;
 		if((loopcount == 50)||(loopcount == 150))
 		{
-			GPIOB->ODR           |=       1<<13;
-			GPIOB->ODR           &=       ~(1<<12);
 		}
 		if((loopcount == 100)||(loopcount == 200))
 		{
-			GPIOB->ODR           &=       ~(1<<13);
-			GPIOB->ODR           |=       1<<12;
 
 			if(loopcount==200)
 				loopcount = 0;
 		}
-		
+*/
 		uint32_t start_tick = tick;
 
 		animations[current_animation].tick_fp();
 
-		lcdFlush();
+		Delay100us(1);
+		setBaud(57600);
+		Delay100us(1);
+		USART_putc(0);
+		Delay100us(1);
+//		setBaud(375000);
+		setBaud(250000);
+		Delay100us(1);
+		USART_putc(0);
+		for(int x = 0;x < LED_WIDTH;x++)
+		{
+			USART_putc(leds[x][0]);
+			USART_putc(leds[x][1]);
+			USART_putc(leds[x][2]);
+			USART_putc(0);
+			USART_putc(0);
+			USART_putc(0);
+		}
+		Delay(1);
 
 		uint32_t duration = tick - start_tick;
 
@@ -269,9 +329,10 @@ int main(void)
 			Delay100us(animations[current_animation].timing - duration);
 
 
-		if(mode != 2)
+		//if(mode != 2)
 			tick_count++;
 
+/*
 		if(get_key_press(KEY_B))
 		{
 			if(get_key_state( KEY_A))
@@ -288,11 +349,11 @@ int main(void)
 			}
 		}
 
-
+*/
 		if(
-			(tick_count == animations[current_animation].duration) ||
+				(tick_count == animations[current_animation].duration) //||
 
-			get_key_press( KEY_A)
+				//get_key_press( KEY_A)
 		)
 		{
 			animations[current_animation].deinit_fp();
@@ -316,8 +377,8 @@ int main(void)
 				);
 
 			tick_count=0;
-	
-			fillRGB(0,0,0);
+
+			//fillRGB(0,0,0);
 
 			animations[current_animation].init_fp();
 
