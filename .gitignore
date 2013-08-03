@@ -7,4 +7,7 @@
 *.elf
 *.lst
 tools/stm32flash
+sim/*
+!sim/*.*
+!sim/Makefile
 
