@@ -9,6 +9,44 @@
 #include <string.h>
 #include<sys/time.h>
 
+#include <termios.h>
+#include <fcntl.h>
+#include <errno.h>
+//#if defined(MAC_OS_X_VERSION_10_4) && (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_4)
+#include <sys/ioctl.h>
+#include <IOKit/serial/ioss.h>
+//#endif
+
+static int serial_bridge;
+
+void init_serial() {
+
+	serial_bridge = open("/dev/cu.usbserial-A602SRIU", O_RDWR);
+
+	struct termios config;
+	memset(&config, 0, sizeof(config));
+	tcgetattr(serial_bridge, &config);
+
+	config.c_iflag = 0;
+	config.c_oflag = 0;
+	config.c_lflag = 0;
+	config.c_cc[VMIN] = 1;
+	config.c_cc[VTIME] = 5;
+
+	cfsetospeed(&config, B115200);
+	cfsetispeed(&config, B115200);
+	config.c_cflag = CS8 | CREAD | CLOCAL | CSTOPB;
+	tcsetattr(serial_bridge, TCSANOW, &config);
+
+
+
+    speed_t speed = 9600;
+    if ( ioctl( serial_bridge,  IOSSIOSPEED, &speed ) == -1 )
+    {
+        printf( "Error %d calling ioctl( ..., IOSSIOSPEED, ... )\n", errno );
+    }
+
+}
 
 
 
@@ -102,6 +140,8 @@ int main(int argc __attribute__((__unused__)), char *argv[] __attribute__((__unu
 
 	srand(time(NULL));
 
+	init_serial();
+	char l  = 0;
 
 	int current_animation = 0;
 
@@ -171,6 +211,43 @@ int main(int argc __attribute__((__unused__)), char *argv[] __attribute__((__unu
 
 		
 		SDL_Flip(screen);
+
+		l++;	
+		usleep(5000);
+		speed_t speed = 38400;
+		if ( ioctl( serial_bridge,  IOSSIOSPEED, &speed ) == -1 )
+		{
+			printf( "Error %d calling ioctl( ..., IOSSIOSPEED, ... )\n", errno );
+		}
+		usleep(1200);
+
+		unsigned char c=0;
+		write(serial_bridge,&c,1);
+		usleep(200);
+		
+		speed = 250000;
+		if ( ioctl( serial_bridge,  IOSSIOSPEED, &speed ) == -1 )
+		{
+			printf( "Error %d calling ioctl( ..., IOSSIOSPEED, ... )\n", errno );
+		}
+		usleep(200);
+
+		unsigned char d[255];
+			
+		d[0]=0;
+
+		for(int u = 0; u < LED_WIDTH; u++)
+		{
+			d[u*6+1]=leds[u][0];
+			d[u*6+2]=leds[u][1];
+			d[u*6+3]=leds[u][2];
+			d[u*6+4]=0;
+			d[u*6+5]=0;
+			d[u*6+6]=0;
+		}
+		write(serial_bridge,d,LED_WIDTH*6);
+
+
 
 
 		Uint32 now = SDL_GetTicks() - lastFrame; 
