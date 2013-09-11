@@ -13,22 +13,23 @@ CORTEXM=4
 endif
 
 #########################################################################
+#	../animations/red_blue.c \
+#	../animations/red_blue2.c \
+#	../animations/strobe.c \
+#	../animations/switch_rgb.c \
 
+#	../animations/bounce.c \
+#	../animations/noise.c \
+#	../animations/plasma.c \
+#	../animations/plasma2.c \
+#	../animations/plasma3.c \
+#	../animations/plasma_bigsin.c \
+#	../animations/rainbow.c \
+#	../animations/rainbow_fast.c \
 
 SRC=$(wildcard  *.c) \
 	core/syscalls.c core/stm32fxxx_it.c core/system_stm32f$(STM32F)xx.c \
-	../animations/bounce.c \
-	../animations/noise.c \
-	../animations/plasma.c \
-	../animations/plasma2.c \
-	../animations/plasma3.c \
-	../animations/plasma_bigsin.c \
-	../animations/rainbow.c \
-	../animations/rainbow_fast.c \
-	../animations/red_blue.c \
-	../animations/red_blue2.c \
-	../animations/strobe.c \
-	../animations/switch_rgb.c \
+	../animations/r2.c \
 	libs/hsv2rgb.c \
 	libs/math.c \
 	libs/spi.c

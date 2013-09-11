@@ -6,7 +6,7 @@
 *.bin
 *.elf
 *.lst
-tools/stm32flash
+firmware/tools/flash/st-flash
 sim/*
 !sim/*.*
 !sim/Makefile

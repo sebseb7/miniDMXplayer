@@ -18,7 +18,7 @@ static uint8_t tick(void) {
 
 	for(x = 0; x < LED_WIDTH; x++) 
 	{
-		uint16_t h = sini(x*180)+ y_part;
+		uint16_t h = sini(x*280)+ y_part;
 
 		uint8_t r = sini((h>>2)+a*30)>>8;
 		uint8_t g = sini((h>>2)+a*40)>>8;
@@ -53,7 +53,7 @@ static void deinit(void)
 
 static void constructor(void) CONSTRUCTOR_ATTRIBUTES
 void constructor(void) {
-	registerAnimation(init,tick,deinit, 35, 1600,1);
+	registerAnimation(init,tick,deinit, 35, 1350,1);
 }
 
 
