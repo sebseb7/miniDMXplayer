@@ -34,12 +34,12 @@ static uint8_t tick(void) {
 		for(int x=0;x<LED_WIDTH;x++)
 			setLedX(x,rgb.r*255,rgb.g*255,rgb.b*255);
 	}
-	else if (t > 30)
+	else if (t > 5)
 	{
 		for(int x=0;x<LED_WIDTH;x++)
 			setLedX(x,0,0,0);
 	}
-	if(t==220)
+	if(t==15)
 		t=0;
 
 
@@ -57,7 +57,7 @@ static void deinit(void)
 
 static void constructor(void) CONSTRUCTOR_ATTRIBUTES
 void constructor(void) {
-	registerAnimation(init,tick,deinit, 305, 3050,1);
+	registerAnimation(init,tick,deinit, 90, 900,1);
 }
 
 
